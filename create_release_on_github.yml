@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    # Atualização do package.json
+    - name: Update package.json patch version
+      if: ${{ contains(github.head_ref, 'fix') }}
+      run: npm --no-git-tag-version version patch
+
+    - name: Update package.json minor version
+      if: ${{ contains(github.head_ref, 'feat') }}
+      run: npm --no-git-tag-version version minor
+
+    - name: Update package.json major version
+      if: ${{ contains(github.head_ref, 'release') }}
+      run: npm --no-git-tag-version version major
+
+    # Push para o github
+    - name: Commit and push changes
+      run: |
+        git remote remove origin
+        git remote add origin https://${{ secrets.TOKEN }}@github.com/${{ github.repository }}.git
+        git config --local user.email "oscarkaka222@gmail.com"
+        git config --local user.name "OscarSilvaOfficial"
+        git add package.json
+        git commit -m "Update package.json version"
+        git push origin main
+
+    # Pega versão atual do package.json
+    - name: Extract version
+      id: extract_version
+      uses: Saionaro/extract-package-version@v1.0.6
+
+    - name: Print version
+      run: echo "Repository version ${{ steps.extract_version.outputs.version }}"
+
+
+    # Criação da release
+    - name: Create Release
+      run: |
+        curl -H "Authorization: token ${{ secrets.TOKEN }}" -H "Content-Type: application/json" -X POST -d "{\"tag_name\": \"v${{ steps.extract_version.outputs.version }}\", \"name\": \"Release v${{ steps.extract_version.outputs.version }}\", \"body\": \"Release version ${{ steps.extract_version.outputs.version }}\"}" https://api.github.com/repos/${{ github.repository }}/releases
