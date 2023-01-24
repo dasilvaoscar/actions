@@ -45,7 +45,6 @@ jobs:
     - name: Print version
       run: echo "Repository version ${{ steps.extract_version.outputs.version }}"
 
-
     # Criação da release
     - name: Create Release
       run: |
