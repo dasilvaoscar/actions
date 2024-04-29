@@ -38,7 +38,10 @@ jobs:
           patch=$(echo $current_version | awk -F. '{print $3}')
           if [[ ${{ github.head_ref }} == *"fix"* ]]; then
             patch=$((patch + 1))
-            minor=0
+            major_minor_patch="${major}.${minor}.${patch}"
+            echo "New version: $major_minor_patch"
+          elif [[ ${{ github.head_ref }} == *"refactor"* ]]; then
+            patch=$((patch + 1))
             major_minor_patch="${major}.${minor}.${patch}"
             echo "New version: $major_minor_patch"
           elif [[ ${{ github.head_ref }} == *"feat"* ]]; then
@@ -55,7 +58,7 @@ jobs:
           else
             echo "No version increment (default): $current_version"
           fi
-          echo "::set-output name=VERSION::$major_minor_patch"
+          echo "::set-output name=VERSION::$major_minor_patch"        
 
       - name: Get Commits
         id: get_commits
@@ -85,4 +88,3 @@ jobs:
           tag_name: ${{ steps.determine_version.outputs.VERSION }}
           release_name: ${{ steps.determine_version.outputs.VERSION }}
           body_path: release_body.txt
-
