@@ -3,7 +3,7 @@ name: Create Git Release
 on:
   pull_request:
     branches:
-      - master
+      - main
     types:
       - closed
 
@@ -24,7 +24,7 @@ jobs:
       - name: Get Latest Release
         id: latest_release
         run: |
-          latest_release=$(curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.NPM_AUTH_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name')
+          latest_release=$(curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name')
           echo "::set-output name=RELEASE::${latest_release}"
           echo "version: ${latest_release}"
 
@@ -66,20 +66,14 @@ jobs:
         with:
           route: GET /repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits
         env:
-          GITHUB_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Format and Encode Commits
         id: format_commits
         run: |
-          AUTHOR_ENCODED=$(echo "${{ github.event.pusher.name }}" | jq -r @uri)
-
-          FORMATTED_COMMITS=$(echo '${{ steps.get_commits.outputs.data }}' | jq -r --arg author "$AUTHOR_ENCODED" '
-          .[] | 
-          "- [`\(.sha[0:6])`](https://github.com/${{ github.repository }}/commit/\(.sha)) created by [\($author)](https://github.com/\($author)) - \(.commit.message)"
-          ' | base64 -w 0)
-
+          FORMATTED_COMMITS=$(echo '${{ steps.get_commits.outputs.data }}' | jq -r '.[] | "- [`\(.sha[0:6])`](https://github.com/${{ github.repository }}/commit/\(.sha)) created by [\(.commit.author.name)](https://github.com/\(.commit.author.name)) - \(.commit.message)"' | base64 -w 0)
           echo "::set-output name=formatted_commits_base64::$FORMATTED_COMMITS"
-
+      
       - name: Decode Formatted Commits and Prepare Release Body
         id: decode_commits
         run: |
@@ -89,7 +83,7 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           tag_name: ${{ steps.determine_version.outputs.VERSION }}
           release_name: ${{ steps.determine_version.outputs.VERSION }}
