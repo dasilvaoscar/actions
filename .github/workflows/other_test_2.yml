@@ -71,8 +71,13 @@ jobs:
       - name: Format and Encode Commits
         id: format_commits
         run: |
-          FORMATTED_COMMITS=$(echo '${{ steps.get_commits.outputs.data }}' | jq -r '.[] | "- [`\(.sha[0:6])`](https://github.com/${{ github.repository }}/commit/\(.sha)) created by [\(.commit.author.name)](https://github.com/\(.commit.author.name)) - \(.commit.message)"' | base64 -w 0)
-          echo "::set-output name=formatted_commits_base64::$FORMATTED_COMMITS"
+          FORMATTED_COMMITS=$(echo '${{ steps.get_commits.outputs.data }}' | jq -r '
+          .[] | 
+          "- [`\(.sha[0:6])`](https://github.com/${{ github.repository }}/commit/\(.sha)) created by [${{ github.event.pusher.name }}](https://github.com/${{ github.event.pusher.name }} | @uri) - \(.commit.message)"
+          ' | base64 -w 0)
+
+        echo "::set-output name=formatted_commits_base64::$FORMATTED_COMMITS"
+
       
       - name: Decode Formatted Commits and Prepare Release Body
         id: decode_commits
